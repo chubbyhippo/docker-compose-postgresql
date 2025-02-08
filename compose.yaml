@@ -1,21 +1,40 @@
 services:
   postgres:
-    image: postgres
+    image: postgres:latest
+    container_name: postgres
+    restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      PGDATA: /data/postgres
+      POSTGRES_USER: admin          # PostgreSQL username
+      POSTGRES_PASSWORD: admin      # PostgreSQL password (set to "admin")
+      POSTGRES_DB: mydatabase       # PostgreSQL database name
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # Mount init.sql
     ports:
       - "5432:5432"
-    restart: unless-stopped
-  
+
   pgadmin:
-    image: dpage/pgadmin4
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    restart: always
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com      # Default pgAdmin user email
+      PGADMIN_DEFAULT_PASSWORD: admin             # Default pgAdmin password (also set to "admin")
     ports:
-      - "${PGADMIN_PORT:-5050}:80"
-    restart: unless-stopped
+      - "5555:80"
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin_config/servers.json:/pgadmin4/servers.json:ro # Mount preconfigured connection file
+    entrypoint:
+      - sh
+      - -c
+      - |
+        echo "Configuring pgAdmin..."
+        mkdir -p /pgadmin4
+        cp /pgadmin4/servers.json /var/lib/pgadmin/servers.json
+        /entrypoint.sh
+volumes:
+  postgres_data:
+  pgadmin_data:
